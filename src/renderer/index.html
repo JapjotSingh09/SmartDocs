@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Content Security Policy: Strict origin sandbox with explicit Supabase authorization -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob:; font-src 'self' data:;">
+  <title>SmartDocs</title>
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+<div class="app-container">
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div class="logo-icon">📄</div>
+      <div>
+        <h1>SmartDocs</h1>
+        <p class="subtitle">Private desktop document management</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="desktop-env-badge" class="desktop-env-badge hidden">
+        <span class="desktop-dot"></span>
+        <span id="desktop-env-text">Desktop</span>
+      </div>
+      <div id="user-header-profile" class="user-header-profile hidden">
+        <div class="user-avatar" id="header-avatar">U</div>
+        <div class="user-info-text">
+          <span class="user-name"  id="header-user-name">User</span>
+          <span class="user-email" id="header-user-email">user@example.com</span>
+        </div>
+        <button id="logout-btn" class="btn btn-secondary btn-sm" title="Sign out of your account">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Offline Status Banner -->
+  <div id="offline-banner" class="offline-banner hidden" role="status">
+    <span>⚠️</span>
+    <span>You are currently offline. Cloud sync, uploads, and downloads are temporarily unavailable.</span>
+  </div>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ──────────── CONFIG NOTICE ──────────── -->
+    <div id="config-notice" class="notice-banner hidden">
+      <span>⚙️</span>
+      <div>
+        <strong>Supabase credentials not configured.</strong>
+        Add your project URL and public anon key in <code>.env</code> and <code>src/renderer/js/supabaseClient.js</code>. Never use the service-role key.
+      </div>
+    </div>
+
+    <!-- ──────────── AUTH VIEW ──────────── -->
+    <div id="auth-view" class="auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-logo">📄</div>
+          <h2>Welcome to SmartDocs</h2>
+          <p class="auth-subtitle">Sign in to manage your private documents</p>
+        </div>
+
+        <div id="auth-alert" class="alert hidden" role="alert"></div>
+
+        <div class="auth-tabs" role="tablist">
+          <button id="tab-login"  class="tab-btn active" role="tab" aria-selected="true">Sign In</button>
+          <button id="tab-signup" class="tab-btn"        role="tab" aria-selected="false">Create Account</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form" novalidate>
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" class="form-input"
+                   placeholder="name@example.com" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" class="form-input"
+                   placeholder="••••••••" autocomplete="current-password" required>
+          </div>
+          <button type="submit" id="login-submit-btn" class="btn btn-primary btn-block">
+            <span class="btn-spinner hidden" id="login-spinner"></span>
+            <span id="login-btn-text">Sign In</span>
+          </button>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="signup-form" class="auth-form hidden" novalidate>
+          <div class="form-group">
+            <label for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" class="form-input"
+                   placeholder="e.g. Jane Doe" autocomplete="name" required>
+          </div>
+          <div class="form-group">
+            <label for="signup-email">Email Address</label>
+            <input type="email" id="signup-email" class="form-input"
+                   placeholder="name@example.com" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" class="form-input"
+                   placeholder="At least 6 characters" autocomplete="new-password" required>
+          </div>
+          <div class="form-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <input type="password" id="signup-confirm" class="form-input"
+                   placeholder="Repeat your password" autocomplete="new-password" required>
+          </div>
+          <button type="submit" id="signup-submit-btn" class="btn btn-primary btn-block">
+            <span class="btn-spinner hidden" id="signup-spinner"></span>
+            <span id="signup-btn-text">Create Account</span>
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          <span id="auth-switch-prompt">Don't have an account?</span>
+          <button type="button" id="auth-switch-btn" class="link-btn">Create one</button>
+        </div>
+      </div>
+    </div><!-- /auth-view -->
+
+    <!-- ──────────── DASHBOARD VIEW ──────────── -->
+    <div id="dashboard-view" class="dashboard hidden">
+
+      <!-- Left sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-profile">
+          <div class="sidebar-avatar" id="sidebar-avatar">U</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-name"  id="sidebar-name">User</div>
+            <div class="sidebar-email" id="sidebar-email">user@example.com</div>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-view="dashboard">
+            <span class="nav-icon">📊</span> Dashboard
+          </button>
+          <button class="nav-item" data-view="my-documents">
+            <span class="nav-icon">📁</span> My Documents
+          </button>
+          <button class="nav-item" data-view="upload">
+            <span class="nav-icon">⬆️</span> Upload New
+          </button>
+          <button class="nav-item" data-view="profile">
+            <span class="nav-icon">👤</span> My Profile
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="storage-label">Storage: Supabase Private Bucket</div>
+          <div class="security-badge">🔒 RLS Enforced</div>
+          <button id="sidebar-logout-btn" class="sidebar-logout-btn" title="Sign out of your account">
+            <span>🚪</span> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main panel -->
+      <section class="panel">
+
+        <!-- ── 1. Dashboard Overview ── -->
+        <div id="view-dashboard" class="panel-view active">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title" id="dashboard-greeting">Dashboard</h2>
+              <p class="panel-subtitle" id="dashboard-subgreeting">Here is an overview of your secure personal documents.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" data-view-trigger="upload">⬆️ Upload Document</button>
+          </div>
+
+          <div id="dashboard-alert" class="alert hidden" role="alert"></div>
+
+          <!-- Document Statistics Cards Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon-wrap stat-icon-total">📁</div>
+              <div class="stat-info">
+                <span class="stat-label">Total Documents</span>
+                <span class="stat-value" id="stat-total-docs">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrap stat-icon-pdf">📕</div>
+              <div class="stat-info">
+                <span class="stat-label">PDF Documents</span>
+                <span class="stat-value" id="stat-pdf-docs">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrap stat-icon-word">📘</div>
+              <div class="stat-info">
+                <span class="stat-label">Word Files</span>
+                <span class="stat-value" id="stat-word-docs">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrap stat-icon-excel">📗</div>
+              <div class="stat-info">
+                <span class="stat-label">Spreadsheets</span>
+                <span class="stat-value" id="stat-excel-docs">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Documents Card -->
+          <div class="section-card">
+            <div class="section-header">
+              <div>
+                <h3 class="section-title">Recent Documents</h3>
+                <p class="section-subtitle">Your most recently uploaded files in the vault</p>
+              </div>
+              <button class="link-btn" data-view-trigger="my-documents">View all documents &rarr;</button>
+            </div>
+
+            <!-- Recent Loading Skeleton -->
+            <div id="recent-loading" class="docs-loading hidden">
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+            </div>
+
+            <!-- Recent load error -->
+            <div id="recent-error" class="empty-state hidden">
+              <div class="empty-icon">⚠️</div>
+              <h3>Unable to load documents</h3>
+              <p>Your recent files could not be loaded. Check your connection and try again.</p>
+              <button class="btn btn-secondary btn-sm" id="retry-recent-btn">Try again</button>
+            </div>
+
+            <!-- Recent Empty State -->
+            <div id="recent-empty" class="empty-state hidden">
+              <div class="empty-icon">📂</div>
+              <h3>No documents yet</h3>
+              <p>Your vault is empty. Upload your first document to see it appear here.</p>
+              <button class="btn btn-primary btn-sm" data-view-trigger="upload">Upload Now</button>
+            </div>
+
+            <!-- Recent Documents Table -->
+            <div id="recent-table-wrap" class="table-wrap hidden">
+              <table class="docs-table">
+                <thead>
+                  <tr>
+                    <th>File Name</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Upload Date</th>
+                    <th class="col-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /view-dashboard -->
+
+        <!-- ── 2. My Documents ── -->
+        <div id="view-my-documents" class="panel-view">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">My Documents</h2>
+              <p class="panel-subtitle">Search and manage files stored in your private vault. Access is limited to your account.</p>
+            </div>
+          </div>
+
+          <div id="docs-alert" class="alert hidden" role="alert"></div>
+
+          <!-- Search & Filter Toolbar -->
+          <div class="docs-toolbar">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="docs-search-input" class="search-input"
+                     placeholder="Search documents by name..." aria-label="Search documents">
+            </div>
+            <div class="toolbar-filters">
+              <label class="filter-label" for="docs-type-filter">Type</label>
+              <select id="docs-type-filter" class="filter-select" aria-label="Filter by file type">
+                <option value="all">All types</option>
+                <option value="pdf">PDF</option>
+                <option value="word">Word</option>
+                <option value="excel">Excel</option>
+                <option value="txt">Text</option>
+              </select>
+              <label class="filter-label" for="docs-date-filter">Uploaded</label>
+              <select id="docs-date-filter" class="filter-select" aria-label="Filter by upload date">
+                <option value="all">All dates</option>
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="year">This year</option>
+              </select>
+            </div>
+            <button type="button" id="clear-filters-btn" class="btn btn-secondary btn-sm" title="Clear search and filters">Clear filters</button>
+            <button type="button" id="refresh-docs-btn" class="btn btn-secondary btn-sm" title="Reload document list from the server">Refresh</button>
+          </div>
+
+          <!-- Loading skeleton -->
+          <div id="docs-loading" class="docs-loading hidden">
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+          </div>
+
+          <div id="docs-error" class="empty-state hidden">
+            <div class="empty-icon">⚠️</div>
+            <h3>Unable to load documents</h3>
+            <p>Your documents could not be loaded. Check your connection and try again.</p>
+            <button class="btn btn-secondary" id="retry-docs-btn">Try again</button>
+          </div>
+
+          <!-- Empty state -->
+          <div id="docs-empty" class="empty-state hidden">
+            <div class="empty-icon">📂</div>
+            <h3>No documents uploaded yet</h3>
+            <p>Your vault is empty. Upload your first document to access it securely anytime.</p>
+            <button class="btn btn-primary" data-view-trigger="upload">Upload Now</button>
+          </div>
+
+          <!-- Search No Results State -->
+          <div id="docs-search-empty" class="empty-state hidden">
+            <div class="empty-icon">🔎</div>
+            <h3>No matching documents</h3>
+            <p>No documents matched your search or filters. Try another keyword or reset the filters.</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="no-results-clear-btn">Clear filters</button>
+          </div>
+
+          <!-- Document table -->
+          <div id="docs-table-wrap" class="table-wrap hidden">
+            <table class="docs-table">
+                <thead>
+                  <tr>
+                    <th>File Name</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Upload Date</th>
+                    <th class="col-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="docs-tbody"></tbody>
+            </table>
+          </div>
+        </div><!-- /view-my-documents -->
+
+        <!-- ── 3. Upload New ── -->
+        <div id="view-upload" class="panel-view">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Upload Document</h2>
+              <p class="panel-subtitle">Files are stored securely in your private cloud folder. Maximum 10 MB per file.</p>
+            </div>
+          </div>
+
+          <div id="upload-alert" class="alert hidden" role="alert"></div>
+
+          <div class="upload-card">
+            <!-- Drop zone -->
+            <div id="drop-zone" class="drop-zone" tabindex="0" role="button"
+                 aria-label="Click or drag a file here to upload">
+              <div class="drop-zone-icon">📎</div>
+              <div class="drop-zone-text">
+                <strong>Click to browse</strong> or drag &amp; drop your file here
+              </div>
+              <div class="drop-zone-hint">
+                Supported: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), TXT &bull; Max 10 MB
+              </div>
+              <input type="file" id="file-input" class="file-input-hidden"
+                     accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword,
+                             application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+                             application/vnd.ms-excel,
+                             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+                             text/plain">
+            </div>
+
+            <!-- Selected file preview -->
+            <div id="file-preview" class="file-preview hidden">
+              <div class="file-preview-icon" id="preview-icon">📄</div>
+              <div class="file-preview-info">
+                <div class="file-preview-name" id="preview-name">filename.pdf</div>
+                <div class="file-preview-size">
+                  <span id="preview-type">PDF</span> · <span id="preview-size">0 KB</span>
+                </div>
+              </div>
+              <button id="file-clear-btn" class="btn-icon" title="Remove selected file">✕</button>
+            </div>
+
+            <!-- Upload progress bar -->
+            <div id="upload-progress-wrap" class="progress-wrap hidden">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="upload-progress-bar" style="width:0%"></div>
+              </div>
+              <div class="progress-label" id="upload-progress-label">Uploading… 0%</div>
+            </div>
+
+            <button id="upload-btn" class="btn btn-primary btn-block" disabled>
+              <span class="btn-spinner hidden" id="upload-spinner"></span>
+              <span id="upload-btn-text">⬆️ Upload Document</span>
+            </button>
+          </div>
+        </div><!-- /view-upload -->
+
+        <!-- ── 4. Profile ── -->
+        <div id="view-profile" class="panel-view">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">My Profile</h2>
+              <p class="panel-subtitle">Your account information and application runtime details.</p>
+            </div>
+          </div>
+          <div class="profile-card">
+            <div class="profile-avatar-lg" id="profile-avatar-lg">U</div>
+            <div class="profile-fields">
+              <div class="profile-row">
+                <span class="profile-label">Full Name</span>
+                <span class="profile-value" id="profile-name">—</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Email Address</span>
+                <span class="profile-value" id="profile-email">—</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">User ID (UUID)</span>
+                <span class="profile-value mono small" id="profile-id">—</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Account Created</span>
+                <span class="profile-value" id="profile-created">—</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Runtime Environment</span>
+                <span class="profile-value" id="profile-runtime">SmartDocs Web / Desktop</span>
+              </div>
+              <div class="profile-row">
+                <span class="profile-label">Security Model</span>
+                <span class="profile-value">
+                  <span class="badge-success">RLS Enforced · PostgreSQL</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div><!-- /view-profile -->
+
+      </section>
+    </div><!-- /dashboard-view -->
+
+  </main>
+
+  <footer class="app-footer">
+    <p>SmartDocs &bull; Electron + Supabase &bull; Secured with PostgreSQL Row Level Security</p>
+  </footer>
+</div><!-- /app-container -->
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <h3 id="modal-title">Delete Document?</h3>
+    <p id="modal-body">This will permanently delete <strong id="modal-filename"></strong> from cloud storage and your database. This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button type="button" id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+      <button type="button" id="modal-confirm-btn" class="btn btn-danger">
+        <span class="btn-spinner hidden" id="modal-spinner"></span>
+        <span id="modal-confirm-text">Delete</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts: Supabase UMD first, then client config, then app logic -->
+<script src="js/supabase.min.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

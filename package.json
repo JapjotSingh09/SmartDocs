@@ -1,0 +1,27 @@
+{
+  "name": "smartdocs",
+  "version": "1.0.0",
+  "description": "Secure desktop document management application built with Electron",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:browser": "start src/renderer/index.html",
+    "build:win": "electron-builder --win"
+  },
+  "keywords": [
+    "electron",
+    "smartdocs",
+    "document-management",
+    "desktop-app"
+  ],
+  "author": "SmartDocs Team",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "dotenv": "^18.0.4"
+  }
+}
